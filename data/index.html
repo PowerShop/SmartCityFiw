@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="th">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SmartCityFiw</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai+Looped:wght@100..900&display=swap"
+        rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans Thai Looped', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+        }
+
+        .sensor-card {
+            min-width: 180px;
+        }
+    </style>
+</head>
+
+<body class="bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-3">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">SmartCityFiw</a>
+            <span class="text-white small">ESP8266 Demo</span>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="m-0">Dashboard</h4>
+            <div>
+                <span id="status" class="badge bg-secondary">Connecting...</span>
+                <button id="refreshBtn" class="btn btn-sm btn-outline-primary ms-2">Refresh</button>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+            <div class="col-6 col-md-4 col-lg-2">
+                <div class="card sensor-card shadow-sm">
+                    <div class="card-body text-center">
+                        <small class="text-muted">Temperature</small>
+                        <div id="temp" class="h2 fw-bold mt-2">--°C</div>
+                        <small id="tempExtra" class="text-muted">—</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-6 col-md-4 col-lg-2">
+                <div class="card sensor-card shadow-sm">
+                    <div class="card-body text-center">
+                        <small class="text-muted">Humidity</small>
+                        <div id="hum" class="h2 fw-bold mt-2">--%</div>
+                        <small id="humExtra" class="text-muted">—</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-6 col-md-4 col-lg-2">
+                <div class="card sensor-card shadow-sm">
+                    <div class="card-body text-center">
+                        <small class="text-muted">Gas (MQ-2)</small>
+                        <div id="mq2" class="h2 fw-bold mt-2">--</div>
+                        <small id="mq2Extra" class="text-muted">raw</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-6 col-md-4 col-lg-2">
+                <div class="card sensor-card shadow-sm">
+                    <div class="card-body text-center">
+                        <small class="text-muted">Obstacle</small>
+                        <div id="obstacle" class="h2 fw-bold mt-2">--</div>
+                        <small id="obstacleExtra" class="text-muted">sensor</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-6 col-md-4 col-lg-2">
+                <div class="card sensor-card shadow-sm">
+                    <div class="card-body text-center">
+                        <small class="text-muted">Sound</small>
+                        <div id="sound" class="h2 fw-bold mt-2">--</div>
+                        <small id="soundExtra" class="text-muted">—</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-6 col-md-4 col-lg-2">
+                <div class="card sensor-card shadow-sm">
+                    <div class="card-body text-center">
+                        <small class="text-muted">Distance</small>
+                        <div id="dist" class="h2 fw-bold mt-2">-- cm</div>
+                        <small id="distExtra" class="text-muted">HC‑SR04</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-12 col-lg-8">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Live JSON</h5>
+                        <pre id="json" style="white-space:pre-wrap; height:200px; overflow:auto;">{}</pre>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-lg-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Info</h5>
+                        <p class="mb-1"><strong>Last update:</strong> <span id="lastUpdate">-</span></p>
+                        <p class="mb-0"><small class="text-muted">Auto-refresh every 2s. Uses /api/sensors endpoint.</small></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const statusEl = document.getElementById('status');
+        const lastUpdateEl = document.getElementById('lastUpdate');
+
+        async function fetchSensors() {
+            try {
+                const res = await fetch('/api/sensors', { cache: 'no-store' });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const data = await res.json();
+
+                // update cards
+                document.getElementById('temp').textContent = (data.temperature_c === -999 ? '--' : data.temperature_c.toFixed(1) + '°C');
+                document.getElementById('hum').textContent = (data.humidity === -999 ? '--' : data.humidity.toFixed(1) + '%');
+                document.getElementById('mq2').textContent = (data.mq2_raw >= 0 ? data.mq2_raw + ' (' + data.mq2_pct + '%)' : 'N/A');
+                document.getElementById('obstacle').textContent = data.mhb_obstacle ? 'YES' : 'NO';
+                document.getElementById('dist').textContent = (data.hcsr04_cm >= 0 ? data.hcsr04_cm + ' cm' : 'Out of range');
+                // sound field may or may not exist
+                document.getElementById('sound').textContent = (typeof data.ky037_detect !== 'undefined') ? (data.ky037_detect ? 'YES' : 'NO') : '--';
+
+                document.getElementById('json').textContent = JSON.stringify(data, null, 2);
+                statusEl.textContent = 'Online';
+                statusEl.className = 'badge bg-success';
+                lastUpdateEl.textContent = new Date().toLocaleTimeString();
+            } catch (e) {
+                console.error('fetchSensors error', e);
+                statusEl.textContent = 'Offline';
+                statusEl.className = 'badge bg-danger';
+            }
+        }
+
+        // initial and periodic
+        document.getElementById('refreshBtn').addEventListener('click', fetchSensors);
+        fetchSensors();
+        setInterval(fetchSensors, 2000);
+    </script>
+</body>
+
+</html>
